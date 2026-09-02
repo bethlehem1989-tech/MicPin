@@ -10,6 +10,11 @@ APP="build/MicPin.app"
 
 [ -d "$APP" ] || { echo "先运行 ./build.sh"; exit 1; }
 
+# build.sh 每次都会清空 build/，背景图要在这里重新生成
+swiftc -O -o build/makedmgbg Tools/MakeDMGBackground.swift -framework AppKit
+build/makedmgbg
+rm -f build/makedmgbg
+
 rm -rf "$DMG_TMP" "$DMG_OUT"
 mkdir -p "$DMG_TMP/.background"
 cp -R "$APP" "$DMG_TMP/"

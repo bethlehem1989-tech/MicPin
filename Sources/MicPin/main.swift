@@ -232,6 +232,13 @@ enum LoginItem {
 
     static func set(_ on: Bool) {
         let fm = FileManager.default
+        let uid = getuid()
+        // 先卸载旧的 launchd 任务，避免残留的 KeepAlive 版本继续把 App 复活
+        let unload = Process()
+        unload.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        unload.arguments = ["bootout", "gui/\(uid)/\(label)"]
+        try? unload.run(); unload.waitUntilExit()
+
         if on {
             let exec = Bundle.main.executablePath ?? CommandLine.arguments[0]
             let plist = """
@@ -242,13 +249,16 @@ enum LoginItem {
                 <key>Label</key><string>\(label)</string>
                 <key>ProgramArguments</key><array><string>\(exec)</string></array>
                 <key>RunAtLoad</key><true/>
-                <key>KeepAlive</key><true/>
                 <key>ProcessType</key><string>Interactive</string>
             </dict>
             </plist>
             """
             try? fm.createDirectory(at: plistURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? plist.write(to: plistURL, atomically: true, encoding: .utf8)
+            let load = Process()
+            load.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+            load.arguments = ["bootstrap", "gui/\(uid)", plistURL.path]
+            try? load.run(); load.waitUntilExit()
         } else {
             try? fm.removeItem(at: plistURL)
         }
